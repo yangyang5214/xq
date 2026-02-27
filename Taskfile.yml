@@ -1,0 +1,11 @@
+version: '3'
+
+vars:
+  PKG: ./cmd/xq
+
+tasks:
+  build:
+    desc: Build for current platform
+    cmds:
+      - mkdir -p bin
+      - GOOS=linux GOARCH=amd64 go build -o bin/xq {{.PKG}}

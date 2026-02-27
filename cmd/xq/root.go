@@ -51,17 +51,22 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	var emailLines []string
+	var failLines []string
 	for _, cubeSym := range cubeSymbols {
 		if cubeSym == "" {
 			continue
 		}
 		body, code, err := client.GetHistory(cubeSym, page, count)
 		if err != nil {
-			log.Printf("[%s] 获取调仓历史失败: %v", cubeSym, err)
+			msg := fmt.Sprintf("[%s] 获取调仓历史失败: %v", cubeSym, err)
+			log.Printf("%s", msg)
+			failLines = append(failLines, msg)
 			continue
 		}
 		if code != http.StatusOK {
-			log.Printf("[%s] HTTP %d: %s", cubeSym, code, string(body))
+			msg := fmt.Sprintf("[%s] HTTP %d: %s", cubeSym, code, string(body))
+			log.Printf("%s", msg)
+			failLines = append(failLines, msg)
 			continue
 		}
 
@@ -69,7 +74,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 		hist, err := xueqiu.ParseHistory(body)
 		if err != nil {
-			log.Printf("[%s] 解析调仓历史失败: %v", cubeSym, err)
+			msg := fmt.Sprintf("[%s] 解析调仓历史失败: %v", cubeSym, err)
+			log.Printf("%s", msg)
+			failLines = append(failLines, msg)
 			continue
 		}
 
@@ -101,27 +108,37 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	toSend := emailTo
-	if len(emailLines) > 0 {
+	sendMail := func(subject, body string) {
 		cfg, err := email.LoadFromHome()
 		if err != nil {
 			log.Printf("读取邮箱配置 $HOME/.email 失败: %v", err)
-		} else if cfg.SMTPHost == "" || cfg.From == "" || cfg.Password == "" {
-			log.Printf("邮箱配置不完整，需设置 smtp_host、from、password")
-		} else if toSend == "" && len(cfg.To) == 0 {
-			log.Printf("未指定收件人：请使用 -t 或在校验 .email 中配置 to")
-		} else {
-			subject := fmt.Sprintf("雪球调仓提醒：%d 条比例变化≥%.0f%%", len(emailLines), weightThreshold)
-			body := strings.Join(emailLines, "\n")
-			if err := cfg.Send(toSend, subject, body); err != nil {
-				log.Printf("发送邮件失败: %v", err)
-			} else {
-				if toSend != "" {
-					log.Printf("已发送调仓提醒邮件至 %s", toSend)
-				} else {
-					log.Printf("已发送调仓提醒邮件至 %s", strings.Join(cfg.To, ", "))
-				}
-			}
+			return
 		}
+		if cfg.SMTPHost == "" || cfg.From == "" || cfg.Password == "" {
+			log.Printf("邮箱配置不完整，需设置 smtp_host、from、password")
+			return
+		}
+		if toSend == "" && len(cfg.To) == 0 {
+			log.Printf("未指定收件人：请使用 -t 或在校验 .email 中配置 to")
+			return
+		}
+		if err := cfg.Send(toSend, subject, body); err != nil {
+			log.Printf("发送邮件失败: %v", err)
+			return
+		}
+		if toSend != "" {
+			log.Printf("已发送邮件至 %s", toSend)
+		} else {
+			log.Printf("已发送邮件至 %s", strings.Join(cfg.To, ", "))
+		}
+	}
+	if len(emailLines) > 0 {
+		subject := fmt.Sprintf("雪球调仓提醒：%d 条比例变化≥%.0f%%", len(emailLines), weightThreshold)
+		sendMail(subject, strings.Join(emailLines, "\n"))
+	}
+	if len(failLines) > 0 {
+		subject := fmt.Sprintf("雪球获取失败：%d 个组合", len(failLines))
+		sendMail(subject, strings.Join(failLines, "\n"))
 	}
 	return nil
 }

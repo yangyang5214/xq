@@ -95,7 +95,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 			fmt.Printf("\n组合 %s 当天无调仓记录\n", cubeSym)
 			continue
 		}
-		fmt.Printf("\n组合 %s 当天调仓 (共 %d 条)\n", cubeSym, len(todayList))
+		fmt.Printf("\n %s 组合 %s 当天调仓 (共 %d 条)\n", time.Now().Format(time.DateTime), cubeSym, len(todayList))
 		for _, item := range todayList {
 			for _, s := range item.RebalancingHistories {
 				fmt.Printf("%s %s 成交价:%.2f 比例:%.2f%% -> %.2f%%\n", s.StockSymbol, s.StockName, s.Price, s.PrevWeightAdjusted, s.PrevTargetWeight)

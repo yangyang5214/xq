@@ -22,6 +22,19 @@ Flags:
 
 ### Others
 
-Get cookies.txt LOCALLY 插件
+####  Get cookies.txt LOCALLY 插件
 
 https://github.com/kairi003/Get-cookies.txt-LOCALLY 
+
+#### email config
+
+```
+cat $HOME/.email 
+{
+    "password": "xxxx",
+    "smtp_host": "smtp.126.com",
+    "smtp_port": 25,
+    "from": "xxxx",
+    "to": ["xxxx"]
+}
+```

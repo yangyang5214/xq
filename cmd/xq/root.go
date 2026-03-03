@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/beer/xq/internal/email"
 	"github.com/beer/xq/internal/xueqiu"
@@ -15,39 +15,41 @@ import (
 
 var (
 	cubesFile       string
-	page            int
-	count           int
 	cookiesFile     string
 	emailTo         string
 	weightThreshold float64
+	snapshotDir     string
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "xq",
-	Short: "雪球组合调仓历史与详情查询",
-	Long:  `从 cookies.txt 与组合列表拉取雪球组合的调仓历史，可选拉取单次调仓详情。`,
+	Short: "雪球组合持仓分布对比与提醒",
+	Long:  `从 cookies.txt 与组合列表拉取雪球组合当前持仓分布，与上次快照对比；比例变化超过阈值时发邮件提醒。`,
 	RunE:  runRoot,
 }
 
 func init() {
 	rootCmd.Flags().StringVarP(&cubesFile, "cubes-file", "f", "cubes.txt", "组合列表文件路径，每行一个 symbol，支持 # 注释")
-	rootCmd.Flags().IntVarP(&page, "page", "p", 1, "调仓历史页码")
-	rootCmd.Flags().IntVarP(&count, "count", "c", 20, "每页条数(1-50)")
 	rootCmd.Flags().StringVarP(&cookiesFile, "cookies-file", "", "cookies.txt", "Get cookies.txt LOCALLY 导出的 cookies.txt 路径")
 	rootCmd.Flags().StringVarP(&emailTo, "to", "t", "", "收件人邮箱（多个用逗号分隔）")
-	rootCmd.Flags().Float64VarP(&weightThreshold, "weight-threshold", "w", 5, "比例变化阈值(%)，超过此值才发邮件提醒")
+	rootCmd.Flags().Float64VarP(&weightThreshold, "weight-threshold", "w", 5, "持仓比例变化阈值(%)，超过此值才发邮件提醒")
+	rootCmd.Flags().StringVarP(&snapshotDir, "snapshot-dir", "s", "", "持仓快照目录，默认 $HOME/.xq_snapshots")
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
-	cookie, _ := xueqiu.LoadCookieFromTxt(cookiesFile)
-	if cookie == "" {
-		log.Fatalf("请提供 Cookie：在项目目录放 cookies.txt（或 -cookies-file 指定路径）")
+	if _, err := os.Stat(cookiesFile); err != nil {
+		log.Fatalf("请提供 Cookie 文件：在项目目录放 cookies.txt（或 -cookies-file 指定路径）")
 	}
-	client := xueqiu.NewClient(cookie)
-
-	cubeSymbols, _ := xueqiu.LoadCubeSymbolsFromFile(cubesFile)
+	cubeSymbols, cubeNames, _ := xueqiu.LoadCubeSymbolsFromFile(cubesFile)
 	if len(cubeSymbols) == 0 {
 		cubeSymbols = []string{"ZH3347671"}
+		cubeNames = make(map[string]string)
+	}
+
+	dir := snapshotDir
+	if dir == "" {
+		home, _ := os.UserHomeDir()
+		dir = filepath.Join(home, ".xq_snapshots")
 	}
 
 	var emailLines []string
@@ -56,54 +58,70 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		if cubeSym == "" {
 			continue
 		}
-		body, code, err := client.GetHistory(cubeSym, page, count)
+		cur, cubeName, err := xueqiu.FetchCubeViaAPI(cubeSym, cookiesFile)
 		if err != nil {
-			msg := fmt.Sprintf("[%s] 获取调仓历史失败: %v", cubeSym, err)
+			msg := fmt.Sprintf("[%s] 获取持仓失败: %v", cubeSym, err)
 			log.Printf("%s", msg)
 			failLines = append(failLines, msg)
 			continue
 		}
-		if code != http.StatusOK {
-			msg := fmt.Sprintf("[%s] HTTP %d: %s", cubeSym, code, string(body))
-			log.Printf("%s", msg)
-			failLines = append(failLines, msg)
+		if len(cur.Holdings) == 0 {
+			fmt.Printf("\n组合 %s 无持仓数据\n", cubeSym)
 			continue
 		}
+		displayName := cubeNames[cubeSym]
+		if displayName == "" {
+			displayName = cubeName
+		}
+		if displayName == "" {
+			displayName = cubeSym
+		}
+		fmt.Printf("\n组合名: %s (%s)\n", displayName, cubeSym)
+		fmt.Println("组合仓位详情:")
 
-		//log.Printf("%v", string(body))
-
-		hist, err := xueqiu.ParseHistory(body)
+		last, err := xueqiu.LoadSnapshot(xueqiu.SnapshotPath(dir, cubeSym))
 		if err != nil {
-			msg := fmt.Sprintf("[%s] 解析调仓历史失败: %v", cubeSym, err)
-			log.Printf("%s", msg)
-			failLines = append(failLines, msg)
-			continue
+			log.Printf("[%s] 读取上次快照失败: %v", cubeSym, err)
 		}
 
-		now := time.Now()
-		todayY, todayM, todayD := now.Date()
-		var todayList []xueqiu.RebalanceItem
-		for _, item := range hist.List {
-			ts := time.UnixMilli(item.UpdatedAt)
-			y, m, d := ts.Date()
-			if y == todayY && m == todayM && d == todayD {
-				todayList = append(todayList, item)
+		lastMap := make(map[string]xueqiu.Holding)
+		if last != nil {
+			for _, h := range last.Holdings {
+				lastMap[h.Symbol] = h
 			}
 		}
 
-		if len(todayList) == 0 {
-			fmt.Printf("\n组合 %s 当天无调仓记录\n", cubeSym)
-			continue
+		curMap := make(map[string]xueqiu.Holding)
+		for _, h := range cur.Holdings {
+			curMap[h.Symbol] = h
+			prev := lastMap[h.Symbol].Weight
+			diff := h.Weight - prev
+			if math.Abs(diff) >= weightThreshold {
+				line := fmt.Sprintf("[%s] %s %s 比例: %.2f%% -> %.2f%% (变化 %+.2f%%)", cubeSym, h.Symbol, h.Name, prev, h.Weight, diff)
+				emailLines = append(emailLines, line)
+			}
+			fmt.Printf("  %s %s %.2f%%", h.Symbol, h.Name, h.Weight)
+			if last != nil {
+				fmt.Printf(" (上次 %.2f%%, 变化 %+.2f%%)", prev, diff)
+			}
+			fmt.Println()
 		}
-		fmt.Printf("\n %s 组合 %s 当天调仓 (共 %d 条)\n", time.Now().Format(time.DateTime), cubeSym, len(todayList))
-		for _, item := range todayList {
-			for _, s := range item.RebalancingHistories {
-				fmt.Printf("%s %s 成交价:%.2f 比例:%.2f%% -> %.2f%%\n", s.StockSymbol, s.StockName, s.Price, s.PrevWeightAdjusted, s.PrevTargetWeight)
-				if math.Abs(s.PrevWeightAdjusted-s.PrevTargetWeight) >= weightThreshold {
-					line := fmt.Sprintf("[%s] %s %s 成交价:%.2f 比例:%.2f%% -> %.2f%%", cubeSym, s.StockSymbol, s.StockName, s.Price, s.PrevWeightAdjusted, s.PrevTargetWeight)
+		// 上次有、本次无的标的（视为比例变为 0）
+		if last != nil {
+			for _, h := range last.Holdings {
+				if _, ok := curMap[h.Symbol]; ok {
+					continue
+				}
+				diff := -h.Weight
+				if math.Abs(diff) >= weightThreshold {
+					line := fmt.Sprintf("[%s] %s %s 比例: %.2f%% -> 0%% (已调出)", cubeSym, h.Symbol, h.Name, h.Weight)
 					emailLines = append(emailLines, line)
 				}
 			}
+		}
+
+		if err := xueqiu.SaveSnapshot(xueqiu.SnapshotPath(dir, cubeSym), cur); err != nil {
+			log.Printf("[%s] 保存快照失败: %v", cubeSym, err)
 		}
 	}
 
@@ -133,7 +151,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if len(emailLines) > 0 {
-		subject := fmt.Sprintf("雪球调仓提醒：%d 条比例变化≥%.0f%%", len(emailLines), weightThreshold)
+		subject := fmt.Sprintf("雪球持仓变化提醒：%d 条比例变化≥%.0f%%", len(emailLines), weightThreshold)
 		sendMail(subject, strings.Join(emailLines, "\n"))
 	}
 	if len(failLines) > 0 {

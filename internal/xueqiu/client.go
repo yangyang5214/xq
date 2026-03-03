@@ -4,16 +4,15 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	baseURL     = "https://xueqiu.com"
-	historyPath = "/cubes/rebalancing/history.json"
-	originPath  = "/cubes/rebalancing/show_origin.json"
-	userAgent   = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	baseURL   = "https://xueqiu.com"
+	userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	// 与 easytrader config/xq.json 一致：https://github.com/shidenggui/easytrader
+	pathRebalancingCurrent = "/cubes/rebalancing/current.json"
 )
 
 // Client 雪球 API 客户端，带 Cookie 认证、重试与限速
@@ -33,9 +32,9 @@ func NewClient(cookie string) *Client {
 		http: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
-				MaxIdleConns:        2,
-				IdleConnTimeout:     30 * time.Second,
-				DisableCompression:  false,
+				MaxIdleConns:       2,
+				IdleConnTimeout:    30 * time.Second,
+				DisableCompression: false,
 			},
 		},
 		cookie:  cookie,
@@ -82,25 +81,10 @@ func (c *Client) do(method, path string, params url.Values) ([]byte, int, error)
 	return body, resp.StatusCode, nil
 }
 
-// GetHistory 拉取组合调仓历史（分页）
-func (c *Client) GetHistory(cubeSymbol string, page, count int) ([]byte, int, error) {
-	params := url.Values{}
-	params.Set("cube_symbol", cubeSymbol)
-	if page <= 0 {
-		page = 1
-	}
-	if count <= 0 || count > 50 {
-		count = 20
-	}
-	params.Set("page", strconv.Itoa(page))
-	params.Set("count", strconv.Itoa(count))
-	return c.do(http.MethodGet, historyPath, params)
+// GetRebalancingCurrent 获取组合当前调仓/持仓（easytrader portfolio_url_new）
+// GET /cubes/rebalancing/current.json?cube_symbol=ZH3347671，返回含 last_rb.holdings 的 JSON
+func (c *Client) GetRebalancingCurrent(cubeSymbol string) ([]byte, int, error) {
+	params := url.Values{"cube_symbol": []string{cubeSymbol}}
+	return c.do(http.MethodGet, pathRebalancingCurrent, params)
 }
 
-// GetShowOrigin 拉取单次调仓详情（需 rb_id）
-func (c *Client) GetShowOrigin(cubeSymbol string, rbID int64) ([]byte, int, error) {
-	params := url.Values{}
-	params.Set("cube_symbol", cubeSymbol)
-	params.Set("rb_id", strconv.FormatInt(rbID, 10))
-	return c.do(http.MethodGet, originPath, params)
-}

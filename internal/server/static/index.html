@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>雪球组合 · 实际持仓</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 1rem 2rem; background: #f5f5f5; }
+    h1 { color: #333; margin-bottom: 0.5rem; }
+    .sub { color: #666; margin-bottom: 1.5rem; }
+    .cubes { list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .cubes li { margin: 0; }
+    .cubes a { display: inline-block; padding: 0.5rem 1rem; background: #1976d2; color: #fff; text-decoration: none; border-radius: 6px; }
+    .cubes a:hover { background: #1565c0; }
+    .holdings { width: 100%; max-width: 720px; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .holdings th, .holdings td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
+    .holdings th { background: #fafafa; font-weight: 600; color: #333; }
+    .holdings tr:last-child td { border-bottom: none; }
+    .holdings .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .back, .link { display: inline-block; margin-bottom: 1rem; color: #1976d2; text-decoration: none; }
+    .back:hover, .link:hover { text-decoration: underline; }
+    .holdings .cubes { font-size: 0.9rem; color: #555; }
+    .total-row { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .total-row label { font-weight: 500; color: #333; }
+    .total-row input { width: 140px; padding: 0.5rem 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
+    .err { color: #c62828; padding: 1rem; background: #ffebee; border-radius: 6px; margin: 1rem 0; }
+    .loading { color: #666; padding: 1rem 0; }
+    .meta { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>雪球组合 · 实际持仓</h1>
+  <p class="sub">聚合全部组合持仓比例，或按组合查看</p>
+  <div id="app">
+    <p class="loading">加载聚合持仓…</p>
+  </div>
+
+  <script>
+    const API = '';
+    function el(tag, attrs, children) {
+      const n = document.createElement(tag);
+      if (attrs) for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'className') n.className = v;
+        else if (k === 'href') n.setAttribute('href', v);
+        else if (k.startsWith('on')) n[k.toLowerCase()] = v;
+        else if (k !== 'children') n.setAttribute(k, v);
+      }
+      if (children != null) {
+        const list = Array.isArray(children) ? children : [children];
+        list.forEach(c => n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+      }
+      return n;
+    }
+    // 聚合：symbol -> { name, weightSum, count, cubeNames }
+    function aggregateHoldings(cubes, holdingsByCube) {
+      const bySymbol = {};
+      for (let i = 0; i < cubes.length; i++) {
+        const cube = cubes[i];
+        const snapshot = holdingsByCube[i];
+        const cubeName = cube.name || cube.symbol;
+        (snapshot.holdings || []).forEach(h => {
+          const sym = h.symbol;
+          if (!sym) return;
+          if (!bySymbol[sym]) {
+            bySymbol[sym] = { name: h.name || '—', weightSum: 0, count: 0, cubeNames: [] };
+          }
+          bySymbol[sym].weightSum += h.weight || 0;
+          bySymbol[sym].count += 1;
+          if (!bySymbol[sym].cubeNames.includes(cubeName)) {
+            bySymbol[sym].cubeNames.push(cubeName);
+          }
+        });
+      }
+      return Object.entries(bySymbol).map(([symbol, v]) => ({
+        symbol,
+        name: v.name,
+        weight: v.count ? (v.weightSum / v.count) : 0,
+        cubeNames: v.cubeNames
+      })).sort((a, b) => b.weight - a.weight);
+    }
+    function renderAggregate(rows, totalAmount) {
+      const total = typeof totalAmount === 'number' && totalAmount > 0 ? totalAmount : 0;
+      const tableRows = rows.map(r => {
+        const weight = r.weight || 0;
+        const invest = total ? (total * weight / 100) : null;
+        const tr = el('tr', { 'data-weight': String(weight) }, [
+          el('td', {}, r.symbol),
+          el('td', {}, r.name),
+          el('td', { className: 'num' }, weight.toFixed(2) + '%'),
+          el('td', { className: 'num invest' }, invest != null ? invest.toFixed(2) : '—'),
+          el('td', { className: 'cubes' }, r.cubeNames.join('、'))
+        ]);
+        return tr;
+      });
+      const table = el('table', { className: 'holdings' }, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, '代码'),
+            el('th', {}, '名称'),
+            el('th', { className: 'num' }, '聚合比例'),
+            el('th', { className: 'num' }, '投入'),
+            el('th', {}, '组合')
+          ])
+        ]),
+        el('tbody', {}, tableRows)
+      ]);
+      const wrap = document.createElement('div');
+      wrap.appendChild(el('a', { href: '#list', className: 'link' }, '按组合查看 →'));
+      const totalRow = document.createElement('div');
+      totalRow.className = 'total-row';
+      const label = el('label', { for: 'total-amount' }, '总仓位（万）');
+      const input = el('input', {
+        type: 'number',
+        id: 'total-amount',
+        min: '0',
+        step: '0.1',
+        placeholder: '如 10 表示 10 万'
+      });
+      if (total > 0) input.value = String(total / 10000);
+      input.oninput = input.onchange = function () {
+        const wan = parseFloat(this.value) || 0;
+        const totalYuan = wan * 10000;
+        wrap.querySelectorAll('tbody tr').forEach(tr => {
+          const w = parseFloat(tr.dataset.weight) || 0;
+          const investTd = tr.cells[3];
+          investTd.textContent = totalYuan ? (totalYuan * w / 100).toFixed(2) : '—';
+        });
+      };
+      totalRow.appendChild(label);
+      totalRow.appendChild(input);
+      wrap.appendChild(totalRow);
+      wrap.appendChild(table);
+      return wrap;
+    }
+    function renderList(cubes) {
+      const list = el('ul', { className: 'cubes' }, cubes.map(c =>
+        el('li', {}, [el('a', { href: '#' + c.symbol }, c.name || c.symbol)])
+      ));
+      const wrap = document.createElement('div');
+      wrap.appendChild(el('a', { href: '#', className: 'link' }, '← 返回聚合持仓'));
+      wrap.appendChild(list);
+      return wrap;
+    }
+    function renderHoldings(snapshot) {
+      const rows = (snapshot.holdings || []).map(h =>
+        el('tr', {}, [
+          el('td', {}, h.symbol),
+          el('td', {}, h.name || '—'),
+          el('td', { className: 'num' }, (h.weight || 0).toFixed(2) + '%')
+        ])
+      );
+      const meta = snapshot.updated_at
+        ? el('p', { className: 'meta' }, '更新时间: ' + new Date(snapshot.updated_at * 1000).toLocaleString('zh-CN'))
+        : null;
+      const table = el('table', { className: 'holdings' }, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, '代码'),
+            el('th', {}, '名称'),
+            el('th', { className: 'num' }, '权重')
+          ])
+        ]),
+        el('tbody', {}, rows)
+      ]);
+      const frag = document.createDocumentFragment();
+      frag.appendChild(el('a', { href: '#', className: 'back' }, '← 返回组合列表'));
+      if (meta) frag.appendChild(meta);
+      frag.appendChild(table);
+      return frag;
+    }
+    async function loadCubes() {
+      const r = await fetch(API + '/api/cubes');
+      if (!r.ok) throw new Error('获取组合列表失败');
+      const data = await r.json();
+      return data.cubes || [];
+    }
+    async function loadHoldings(symbol) {
+      const r = await fetch(API + '/api/cubes/' + encodeURIComponent(symbol));
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.error || '获取持仓失败');
+      }
+      return r.json();
+    }
+    function showErr(msg) {
+      app.innerHTML = '';
+      app.appendChild(el('div', { className: 'err' }, [document.createTextNode(msg)]));
+    }
+    async function run() {
+      const hash = (location.hash || '').slice(1).trim();
+      const app = document.getElementById('app');
+      if (hash === 'list') {
+        app.innerHTML = '<p class="loading">加载组合列表…</p>';
+        try {
+          const cubes = await loadCubes();
+          app.innerHTML = '';
+          app.appendChild(renderList(cubes));
+        } catch (e) {
+          showErr(e.message || '加载失败');
+        }
+        return;
+      }
+      if (hash) {
+        app.innerHTML = '<p class="loading">加载持仓…</p>';
+        try {
+          const snapshot = await loadHoldings(hash);
+          app.innerHTML = '';
+          app.appendChild(renderHoldings(snapshot));
+        } catch (e) {
+          showErr(e.message || '加载失败');
+        }
+        return;
+      }
+      app.innerHTML = '<p class="loading">加载聚合持仓…</p>';
+      try {
+        const cubes = await loadCubes();
+        if (cubes.length === 0) {
+          app.innerHTML = '';
+          app.appendChild(el('div', { className: 'err' }, [document.createTextNode('暂无组合')]));
+          return;
+        }
+        const holdingsByCube = await Promise.all(cubes.map(c => loadHoldings(c.symbol)));
+        const rows = aggregateHoldings(cubes, holdingsByCube);
+        app.innerHTML = '';
+        app.appendChild(renderAggregate(rows));
+      } catch (e) {
+        showErr(e.message || '加载失败');
+      }
+    }
+    window.addEventListener('hashchange', run);
+    run();
+  </script>
+</body>
+</html>

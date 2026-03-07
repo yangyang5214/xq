@@ -13,10 +13,28 @@ import (
 	"github.com/beer/xq/internal/xueqiu"
 )
 
+// isTradingTime 判断当前是否为交易日 9:00-15:00（北京时间）
+func isTradingTime() bool {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		loc = time.FixedZone("CST", 8*3600)
+	}
+	now := time.Now().In(loc)
+	if now.Weekday() == time.Sunday || now.Weekday() == time.Saturday {
+		return false
+	}
+	hour := now.Hour()
+	return hour >= 9 && hour < 15
+}
+
 // runNotify 执行一次持仓对比与邮件提醒
 func (s *Server) runNotify() {
 	cfg := s.configStore.getNotify()
 	if !cfg.Enabled {
+		return
+	}
+	if !isTradingTime() {
+		logger.Log.Printf("[notify] 非交易日 9:00-15:00，跳过检查")
 		return
 	}
 	logger.Log.Printf("[notify] 开始检查…")

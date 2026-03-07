@@ -31,7 +31,7 @@ type Server struct {
 // New 创建 Server
 func New(cfg Config) *Server {
 	cs := &configStore{}
-	cs.load()
+	cs.load() // 从 $HOME/.xq_config.json 加载
 	return &Server{cfg: cfg, configStore: cs}
 }
 
@@ -135,7 +135,7 @@ func (s *Server) ConfigPut(w http.ResponseWriter, r *http.Request) {
 		nc.IntervalMinutes = 30
 	}
 	if err := s.configStore.save(nc); err != nil {
-		logger.Log.Printf("[server] 保存配置失败: %v", err)
+		logger.Log.Printf("[server] 保存配置失败 path=%s err=%v", configPath(), err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "保存配置失败"})
 		return
 	}

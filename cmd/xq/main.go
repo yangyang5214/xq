@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
+	logger.Init("runtime.log")
 	if err := rootCmd.Execute(); err != nil {
 		logger.Log.Fatal(err)
 	}

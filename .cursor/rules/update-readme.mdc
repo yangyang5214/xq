@@ -1,0 +1,11 @@
+---
+description: 每次新写完代码都更新 README
+globs: **/*.go
+alwaysApply: true
+---
+
+# 代码变更后更新 README
+
+- **必须**：完成新功能、修改命令、调整配置或 API 后，同步更新 `README.md`
+- 更新内容：新增/变更的子命令、参数、配置项、API、使用说明
+- 保持 README 与当前代码一致，方便他人使用

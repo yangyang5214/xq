@@ -35,6 +35,9 @@ cat $HOME/.email
     "smtp_host": "smtp.126.com",
     "smtp_port": 25,
     "from": "xxxx",
-    "to": ["xxxx"]
+    "to": ["xxxx"],
+    "allow_plain": true
 }
 ```
+
+端口 25 若报 "unencrypted connection"，可加 `"allow_plain": true`（服务器不支持 STARTTLS 时使用，密码明文传输）。

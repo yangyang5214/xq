@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
+	"github.com/beer/xq/internal/logger"
 )
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal(err)
 	}
 }

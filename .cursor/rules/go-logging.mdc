@@ -7,7 +7,6 @@ globs: **/*.go
 
 - **禁止**使用 `fmt.Printf`、`fmt.Println`、`fmt.Fprintf`、`fmt.Print` 等直接写 stdout/stderr。
 - **必须**统一使用**全局一个 log 对象**完成所有输出（包括正常程序输出与错误/日志）：
-  - 使用标准库时：全项目只用 `log` 包（`log.Printf`、`log.Println`、`log.Fatalf` 等），不要混用 `fmt` 做输出。
-  - 使用自定义 logger 时：在合适位置（如 `main` 包或 `internal/logger`）定义**唯一**的包级变量（如 `var Log = log.New(...)`），全项目仅通过该变量输出，不直接使用 `fmt` 或零散的 `log.New`。
+  - 全项目使用 `internal/logger` 包的 `logger.Log`（`logger.Log.Printf`、`logger.Log.Println`、`logger.Log.Fatal` 等），不直接使用 `log` 包或 `fmt` 做输出。
 - **禁止**使用 `fmt.Fprintf(os.Stderr, ...)` 输出错误或日志；一律走上述全局 log。
 - 需要退出时用 `log.Fatalf(...)` 或等价调用，其它情况用 `log.Printf` / `log.Println` 或自定义 logger 的对应方法。

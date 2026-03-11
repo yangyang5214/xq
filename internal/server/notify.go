@@ -34,7 +34,7 @@ func (s *Server) runNotify() {
 		return
 	}
 	if !isTradingTime() {
-		logger.Log.Printf("[notify] 非交易日 9:00-15:00，跳过检查")
+		logger.Log.Printf("[notify] 非交易时段（仅交易日 9:00-15:00），跳过检查")
 		return
 	}
 	logger.Log.Printf("[notify] 开始检查…")
@@ -137,11 +137,16 @@ func (s *Server) runNotify() {
 
 	sendMessage := func(subject, body string) {
 		logger.Log.Printf("[notify] 准备发送飞书消息 subject=%q", subject)
-		if cfg.FeishuWebhook == "" {
-			logger.Log.Printf("[notify] 飞书 webhook URL 未配置，跳过发送")
+		if cfg.FeishuAppID == "" || cfg.FeishuAppSecret == "" {
+			logger.Log.Printf("[notify] 飞书 App ID 或 App Secret 未配置，跳过发送")
 			return
 		}
-		fcfg := &feishu.Config{WebhookURL: cfg.FeishuWebhook}
+		fcfg := &feishu.Config{
+			AppID:       cfg.FeishuAppID,
+			AppSecret:   cfg.FeishuAppSecret,
+			ReceiveID:   cfg.FeishuReceiveID,
+			ReceiveType: cfg.FeishuReceiveType,
+		}
 		if err := fcfg.SendText(subject, body); err != nil {
 			logger.Log.Printf("[notify] 发送飞书消息失败: %v", err)
 			return

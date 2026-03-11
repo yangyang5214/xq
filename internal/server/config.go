@@ -11,19 +11,25 @@ import (
 
 // NotifyConfig 页面可配置的提醒参数
 type NotifyConfig struct {
-	Enabled         bool    `json:"enabled"`
-	FeishuWebhook   string  `json:"feishu_webhook"` // 飞书群机器人 webhook URL
-	WeightThreshold float64 `json:"weight_threshold"`
-	IntervalMinutes int     `json:"interval_minutes"` // 检查间隔（分钟）
+	Enabled           bool    `json:"enabled"`
+	FeishuAppID       string  `json:"feishu_app_id"`      // 飞书应用 App ID
+	FeishuAppSecret   string  `json:"feishu_app_secret"`  // 飞书应用 App Secret
+	FeishuReceiveID   string  `json:"feishu_receive_id"`   // 接收者 ID（用户ID或群ID）- 主动推送时使用
+	FeishuReceiveType string `json:"feishu_receive_type"` // 接收者类型：open_id、user_id、union_id、chat_id
+	WeightThreshold   float64 `json:"weight_threshold"`
+	IntervalMinutes   int     `json:"interval_minutes"` // 检查间隔（分钟）
 }
 
 // defaultNotifyConfig 默认提醒配置
 func defaultNotifyConfig() NotifyConfig {
 	return NotifyConfig{
-		Enabled:         false,
-		FeishuWebhook:   "",
-		WeightThreshold: 5,
-		IntervalMinutes: 30,
+		Enabled:           false,
+		FeishuAppID:       "",
+		FeishuAppSecret:   "",
+		FeishuReceiveID:   "",
+		FeishuReceiveType: "open_id",
+		WeightThreshold:   5,
+		IntervalMinutes:   30,
 	}
 }
 

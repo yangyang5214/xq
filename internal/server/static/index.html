@@ -27,6 +27,12 @@
     .err { color: #c62828; padding: 1rem; background: #ffebee; border-radius: 6px; margin: 1rem 0; }
     .loading { color: #666; padding: 1rem 0; }
     .meta { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
+    .filter-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-bar label { font-weight: 500; color: #333; }
+    .filter-bar select { padding: 0.5rem 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; background: #fff; min-width: 200px; }
+    .filter-bar button { padding: 0.5rem 1rem; background: #1976d2; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .filter-bar button:hover { background: #1565c0; }
+    .meta { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
     .config { max-width: 480px; background: #fff; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
     .config h3 { margin: 0 0 1rem 0; font-size: 1rem; color: #333; }
     .config label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #555; }
@@ -40,8 +46,7 @@
 </head>
 <body>
   <h1>雪球组合 · 实际持仓</h1>
-  <p class="sub">聚合全部组合持仓比例，或按组合查看 <a href="#config" class="link">提醒配置</a></p>
-  <div id="config-panel" style="display:none"></div>
+  <p class="sub">聚合全部组合持仓比例，可按组合筛选</p>
   <div id="app">
     <p class="loading">加载聚合持仓…</p>
   </div>
@@ -89,67 +94,132 @@
         cubeNames: v.cubeNames
       })).sort((a, b) => b.weight - a.weight);
     }
-    function renderAggregate(rows, totalAmount) {
+    function renderAggregate(rows, totalAmount, cubes) {
       const total = typeof totalAmount === 'number' && totalAmount > 0 ? totalAmount : 0;
-      const tableRows = rows.map(r => {
-        const weight = r.weight || 0;
-        const investWan = total ? (total / 10000) * weight / 100 : null;
-        const tr = el('tr', { 'data-weight': String(weight) }, [
-          el('td', {}, r.symbol),
-          el('td', {}, r.name),
-          el('td', { className: 'num' }, weight.toFixed(2) + '%'),
-          el('td', { className: 'num invest' }, investWan != null ? investWan.toFixed(2) : '—'),
-          el('td', { className: 'cubes' }, r.cubeNames.join('、'))
-        ]);
-        return tr;
-      });
-      const table = el('table', { className: 'holdings' }, [
-        el('thead', {}, [
-          el('tr', {}, [
-            el('th', {}, '代码'),
-            el('th', {}, '名称'),
-            el('th', { className: 'num' }, '聚合比例'),
-            el('th', { className: 'num' }, '投入（万）'),
-            el('th', {}, '组合')
-          ])
-        ]),
-        el('tbody', {}, tableRows)
-      ]);
-      const wrap = document.createElement('div');
-      wrap.appendChild(el('a', { href: '#list', className: 'link' }, '按组合查看 →'));
+
+      // 创建容器
+      const container = document.createElement('div');
+
+      // 筛选栏
+      const filterBar = document.createElement('div');
+      filterBar.className = 'filter-bar';
+
+      filterBar.appendChild(el('label', {}, '按组合筛选：'));
+
+      const select = el('select', { id: 'cube-filter' });
+      select.appendChild(el('option', { value: '' }, '全部组合（聚合）'));
+
+      if (cubes && cubes.length > 0) {
+        cubes.forEach(c => {
+          select.appendChild(el('option', { value: c.symbol }, c.name || c.symbol));
+        });
+      }
+      filterBar.appendChild(select);
+
+      const resetBtn = el('button', {}, '重置');
+      filterBar.appendChild(resetBtn);
+      container.appendChild(filterBar);
+
+      // 总仓位输入
       const totalRow = document.createElement('div');
       totalRow.className = 'total-row';
-      const label = el('label', { for: 'total-amount' }, '总仓位（万）');
-      const input = el('input', {
+      totalRow.appendChild(el('label', { for: 'total-amount' }, '总仓位（万）'));
+      const totalInput = el('input', {
         type: 'number',
         id: 'total-amount',
         min: '0',
         step: '0.1',
         placeholder: '如 10 表示 10 万'
       });
-      if (total > 0) input.value = String(total / 10000);
-      input.oninput = input.onchange = function () {
-        const wan = parseFloat(this.value) || 0;
-        wrap.querySelectorAll('tbody tr').forEach(tr => {
+      if (total > 0) totalInput.value = String(total / 10000);
+      totalRow.appendChild(totalInput);
+      container.appendChild(totalRow);
+
+      // 负责更新投入列的函数
+      const updateInvestInputs = () => {
+        const wan = parseFloat(totalInput.value) || 0;
+        container.querySelectorAll('tbody tr').forEach(tr => {
           const w = parseFloat(tr.dataset.weight) || 0;
           const investTd = tr.cells[3];
-          investTd.textContent = wan ? (wan * w / 100).toFixed(2) : '—';
+          if (investTd) {
+            investTd.textContent = (select.value === '') ? (wan ? (wan * w / 100).toFixed(2) : '—') : '—';
+          }
         });
       };
-      totalRow.appendChild(label);
-      totalRow.appendChild(input);
-      wrap.appendChild(totalRow);
-      wrap.appendChild(table);
-      return wrap;
-    }
-    function renderList(cubes) {
-      const list = el('ul', { className: 'cubes' }, cubes.map(c =>
-        el('li', {}, [el('a', { href: '#' + c.symbol }, c.name || c.symbol)])
-      ));
-      const wrap = document.createElement('div');
-      wrap.appendChild(el('a', { href: '#', className: 'link' }, '← 返回聚合持仓'));
-      wrap.appendChild(list);
-      return wrap;
+
+      totalInput.oninput = totalInput.onchange = updateInvestInputs;
+
+      // 创建表格
+      const table = el('table', { className: 'holdings' }, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, '代码'),
+            el('th', {}, '名称'),
+            el('th', { className: 'num' }, '比例'),
+            el('th', { className: 'num' }, '投入（万）'),
+            el('th', {}, '组合')
+          ])
+        ]),
+        el('tbody', {}, [])
+      ]);
+      container.appendChild(table);
+
+      // 更新筛选的函数
+      const updateFilter = async () => {
+        const symbol = select.value;
+        const tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+
+        if (!symbol) {
+          // 显示聚合数据
+          totalInput.disabled = false;
+          rows.forEach(r => {
+            const weight = r.weight || 0;
+            const investWan = total ? (total / 10000) * weight / 100 : null;
+            const tr = el('tr', { 'data-weight': String(weight) }, [
+              el('td', {}, r.symbol),
+              el('td', {}, r.name),
+              el('td', { className: 'num' }, weight.toFixed(2) + '%'),
+              el('td', { className: 'num invest' }, investWan != null ? investWan.toFixed(2) : '—'),
+              el('td', { className: 'cubes' }, r.cubeNames.join('、'))
+            ]);
+            tbody.appendChild(tr);
+          });
+          updateInvestInputs();
+        } else {
+          // 显示单个组合
+          totalInput.disabled = true;
+          try {
+            const snapshot = await loadHoldings(symbol);
+            const singleRows = (snapshot.holdings || []).map(h => {
+              const tr = el('tr', { 'data-weight': String(h.weight || 0) }, [
+                el('td', {}, h.symbol),
+                el('td', {}, h.name || '—'),
+                el('td', { className: 'num' }, (h.weight || 0).toFixed(2) + '%'),
+                el('td', { className: 'num invest' }, '—'),
+                el('td', { className: 'cubes' }, snapshot.cube_name || symbol)
+              ]);
+              return tr;
+            }).sort((a, b) => parseFloat(b.dataset.weight) - parseFloat(a.dataset.weight));
+            singleRows.forEach(r => tbody.appendChild(r));
+          } catch (e) {
+            tbody.appendChild(el('tr', {}, el('td', { colSpan: 5 }, '加载失败: ' + (e.message || '未知错误'))));
+          }
+        }
+      };
+
+      select.onchange = updateFilter;
+
+      // 重置按钮
+      resetBtn.onclick = () => {
+        select.value = '';
+        updateFilter();
+      };
+
+      // 初始化：显示聚合数据
+      updateFilter();
+
+      return container;
     }
     function renderHoldings(snapshot) {
       const rows = (snapshot.holdings || []).map(h =>
@@ -178,82 +248,6 @@
       frag.appendChild(table);
       return frag;
     }
-    async function loadConfig() {
-      const r = await fetch(API + '/api/config');
-      if (!r.ok) throw new Error('获取配置失败');
-      const data = await r.json();
-      return data.notify || { enabled: false, email_to: '', weight_threshold: 5, interval_minutes: 30 };
-    }
-    async function saveConfig(notify) {
-      const r = await fetch(API + '/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notify })
-      });
-      if (!r.ok) {
-        const e = await r.json().catch(() => ({}));
-        throw new Error(e.error || '保存配置失败');
-      }
-      return r.json();
-    }
-    function renderConfig(notify) {
-      const wrap = document.createElement('div');
-      wrap.className = 'config';
-      wrap.innerHTML = '<h3>持仓变化邮件提醒</h3>';
-      const enabledRow = document.createElement('div');
-      enabledRow.className = 'row';
-      const cb = el('input', { type: 'checkbox', id: 'notify-enabled', checked: notify.enabled });
-      enabledRow.appendChild(cb);
-      enabledRow.appendChild(el('label', { for: 'notify-enabled' }, '启用定时提醒'));
-      wrap.appendChild(enabledRow);
-      const intervalLabel = el('label', { for: 'notify-interval' }, '检查间隔（分钟）');
-      const intervalInput = el('input', { type: 'number', id: 'notify-interval', min: '1', step: '1', value: String(notify.interval_minutes || 30) });
-      wrap.appendChild(intervalLabel);
-      wrap.appendChild(intervalInput);
-      wrap.appendChild(el('p', { className: 'hint' }, '每隔多少分钟检查一次持仓变化'));
-      const emailLabel = el('label', { for: 'notify-email' }, '收件人邮箱（多个用逗号分隔）');
-      const emailInput = el('input', { type: 'text', id: 'notify-email', placeholder: 'user@example.com' });
-      if (notify.email_to) emailInput.value = notify.email_to;
-      wrap.appendChild(emailLabel);
-      wrap.appendChild(emailInput);
-      wrap.appendChild(el('p', { className: 'hint' }, '留空则使用 $HOME/.email 中的 to'));
-      const threshLabel = el('label', { for: 'notify-threshold' }, '持仓比例变化阈值 (%)');
-      const threshInput = el('input', { type: 'number', id: 'notify-threshold', min: '0', step: '0.5', value: String(notify.weight_threshold ?? 5) });
-      wrap.appendChild(threshLabel);
-      wrap.appendChild(threshInput);
-      wrap.appendChild(el('p', { className: 'hint' }, '超过此阈值才发邮件；可设置为 0 测试发送邮件'));
-      const btn = el('button', {}, '保存配置');
-      btn.onclick = async () => {
-        btn.disabled = true;
-        try {
-          await saveConfig({
-            enabled: cb.checked,
-            email_to: emailInput.value.trim(),
-            weight_threshold: (() => { const v = parseFloat(threshInput.value); return isNaN(v) || v < 0 ? 5 : v; })(),
-            interval_minutes: parseInt(intervalInput.value, 10) || 30
-          });
-          btn.textContent = '已保存';
-          setTimeout(() => { btn.textContent = '保存配置'; btn.disabled = false; }, 1500);
-        } catch (e) {
-          alert(e.message || '保存失败');
-          btn.disabled = false;
-        }
-      };
-      wrap.appendChild(btn);
-      const runBtn = el('button', { style: 'margin-left:0.5rem' }, '立即检查');
-      runBtn.onclick = async () => {
-        runBtn.disabled = true;
-        try {
-          await fetch(API + '/api/notify/run', { method: 'POST' });
-          runBtn.textContent = '已触发';
-          setTimeout(() => { runBtn.textContent = '立即检查'; runBtn.disabled = false; }, 1500);
-        } catch (e) {
-          runBtn.disabled = false;
-        }
-      };
-      wrap.appendChild(runBtn);
-      return wrap;
-    }
     async function loadCubes() {
       const r = await fetch(API + '/api/cubes');
       if (!r.ok) throw new Error('获取组合列表失败');
@@ -275,35 +269,7 @@
     async function run() {
       const hash = (location.hash || '').slice(1).trim();
       const app = document.getElementById('app');
-      const configPanel = document.getElementById('config-panel');
-      if (hash === 'config') {
-        configPanel.style.display = 'block';
-        app.style.display = 'none';
-        configPanel.innerHTML = '<p class="loading">加载配置…</p>';
-        try {
-          const notify = await loadConfig();
-          configPanel.innerHTML = '';
-          configPanel.appendChild(renderConfig(notify));
-        } catch (e) {
-          configPanel.innerHTML = '';
-          configPanel.appendChild(el('div', { className: 'err' }, [document.createTextNode(e.message || '加载失败')]));
-        }
-        configPanel.appendChild(el('a', { href: '#', className: 'back' }, '← 返回'));
-        return;
-      }
-      configPanel.style.display = 'none';
-      app.style.display = '';
-      if (hash === 'list') {
-        app.innerHTML = '<p class="loading">加载组合列表…</p>';
-        try {
-          const cubes = await loadCubes();
-          app.innerHTML = '';
-          app.appendChild(renderList(cubes));
-        } catch (e) {
-          showErr(e.message || '加载失败');
-        }
-        return;
-      }
+
       if (hash) {
         app.innerHTML = '<p class="loading">加载持仓…</p>';
         try {
@@ -326,7 +292,7 @@
         const holdingsByCube = await Promise.all(cubes.map(c => loadHoldings(c.symbol)));
         const rows = aggregateHoldings(cubes, holdingsByCube);
         app.innerHTML = '';
-        app.appendChild(renderAggregate(rows));
+        app.appendChild(renderAggregate(rows, 0, cubes));
       } catch (e) {
         showErr(e.message || '加载失败');
       }

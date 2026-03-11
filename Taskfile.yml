@@ -5,7 +5,23 @@ vars:
 
 tasks:
   build:
-    desc: Build for current platform
+    desc: Build for current platform with static linking
     cmds:
       - mkdir -p bin
-      - GOOS=linux GOARCH=amd64 go build -o bin/xq {{.PKG}}
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-s -w" -o bin/xq {{.PKG}}
+
+  deploy:
+    desc: Deploy to remote server (stop -> upload -> restart)
+    vars:
+      HOST: '{{.HOST | default "beer"}}'
+      BINARY: '{{.BINARY | default "bin/xq"}}'
+      REMOTE: '{{.REMOTE | default "/opt/xq"}}'
+    cmds:
+      - echo "停止远程服务..."
+      - ssh {{.HOST}} systemctl stop xq
+      - echo "上传二进制文件..."
+      - scp {{.BINARY}} {{.HOST}}:{{.REMOTE}}
+      - echo "重启服务..."
+      - ssh {{.HOST}} systemctl restart xq.service
+      - echo "检查服务状态..."
+      - ssh {{.HOST}} systemctl status xq.service

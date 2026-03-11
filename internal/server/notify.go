@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beer/xq/internal/email"
+	"github.com/beer/xq/internal/feishu"
 	"github.com/beer/xq/internal/logger"
 	"github.com/beer/xq/internal/xueqiu"
 )
@@ -27,7 +27,7 @@ func isTradingTime() bool {
 	return hour >= 9 && hour < 15
 }
 
-// runNotify 执行一次持仓对比与邮件提醒
+// runNotify 执行一次持仓对比与飞书消息提醒
 func (s *Server) runNotify() {
 	cfg := s.configStore.getNotify()
 	if !cfg.Enabled {
@@ -63,7 +63,7 @@ func (s *Server) runNotify() {
 		return
 	}
 
-	var emailLines []string
+	var notifyLines []string
 	var failLines []string
 	for _, cubeSym := range symbols {
 		if cubeSym == "" {
@@ -107,7 +107,11 @@ func (s *Server) runNotify() {
 			diff := h.Weight - prev
 			if math.Abs(diff) >= cfg.WeightThreshold {
 				line := fmt.Sprintf("[%s] %s %s 比例: %.2f%% -> %.2f%% (变化 %+.2f%%)", cubeSym, h.Symbol, h.Name, prev, h.Weight, diff)
-				emailLines = append(emailLines, line)
+				logger.Log.Printf("[notify] 阈值触发: %s (diff=%.2f%%, threshold=%.1f%%)", line, diff, cfg.WeightThreshold)
+				notifyLines = append(notifyLines, line)
+			} else if lastMap[h.Symbol].Symbol != "" {
+				// 只在有历史记录时记录未触发阈值的变化
+				logger.Log.Printf("[notify] 变化但未达阈值: %s %s %.2f%%->%.2f%% (diff=%.2f%%, threshold=%.1f%%)", cubeSym, h.Symbol, prev, h.Weight, diff, cfg.WeightThreshold)
 			}
 		}
 		if last != nil {
@@ -118,7 +122,10 @@ func (s *Server) runNotify() {
 				diff := -h.Weight
 				if math.Abs(diff) >= cfg.WeightThreshold {
 					line := fmt.Sprintf("[%s] %s %s 比例: %.2f%% -> 0%% (已调出)", cubeSym, h.Symbol, h.Name, h.Weight)
-					emailLines = append(emailLines, line)
+					logger.Log.Printf("[notify] 阈值触发(调出): %s (diff=-%.2f%%, threshold=%.1f%%)", line, h.Weight, cfg.WeightThreshold)
+					notifyLines = append(notifyLines, line)
+				} else {
+					logger.Log.Printf("[notify] 调出但未达阈值: %s %s (原比例%.2f%%, threshold=%.1f%%)", cubeSym, h.Symbol, h.Weight, cfg.WeightThreshold)
 				}
 			}
 		}
@@ -128,51 +135,37 @@ func (s *Server) runNotify() {
 		}
 	}
 
-	sendMail := func(subject, body string) {
-		logger.Log.Printf("[notify] 准备发邮件 subject=%q", subject)
-		ecfg, err := email.LoadFromHome()
-		if err != nil {
-			logger.Log.Printf("[notify] 读取邮箱配置 $HOME/.email 失败: %v", err)
+	sendMessage := func(subject, body string) {
+		logger.Log.Printf("[notify] 准备发送飞书消息 subject=%q", subject)
+		if cfg.FeishuWebhook == "" {
+			logger.Log.Printf("[notify] 飞书 webhook URL 未配置，跳过发送")
 			return
 		}
-		logger.Log.Printf("[notify] 邮箱配置: host=%s port=%d from=%s allow_plain=%v", ecfg.SMTPHost, ecfg.SMTPPort, ecfg.From, ecfg.AllowPlain)
-		if ecfg.SMTPHost == "" || ecfg.From == "" || ecfg.Password == "" {
-			logger.Log.Printf("[notify] 邮箱配置不完整，需设置 smtp_host、from、password")
+		fcfg := &feishu.Config{WebhookURL: cfg.FeishuWebhook}
+		if err := fcfg.SendText(subject, body); err != nil {
+			logger.Log.Printf("[notify] 发送飞书消息失败: %v", err)
 			return
 		}
-		toSend := cfg.EmailTo
-		if toSend == "" && len(ecfg.To) == 0 {
-			logger.Log.Printf("[notify] 未指定收件人：请在页面配置 email_to 或在 $HOME/.email 中配置 to")
-			return
-		}
-		if toSend == "" {
-			toSend = strings.Join(ecfg.To, ",")
-		}
-		logger.Log.Printf("[notify] 收件人: %s", toSend)
-		if err := ecfg.Send(toSend, subject, body); err != nil {
-			logger.Log.Printf("[notify] 发送邮件失败: %v", err)
-			return
-		}
-		logger.Log.Printf("[notify] 邮件已发送: %s", subject)
+		logger.Log.Printf("[notify] 飞书消息已发送: %s", subject)
 	}
 
-	logger.Log.Printf("[notify] 持仓变化 %d 条, 失败 %d 个组合, 阈值=%.1f%%", len(emailLines), len(failLines), cfg.WeightThreshold)
-	if len(emailLines) > 0 {
-		subject := fmt.Sprintf("雪球持仓变化提醒：%d 条比例变化≥%.0f%%", len(emailLines), cfg.WeightThreshold)
-		logger.Log.Printf("[notify] 发送邮件: 持仓变化提醒")
-		sendMail(subject, strings.Join(emailLines, "\n"))
+	logger.Log.Printf("[notify] 持仓变化 %d 条, 失败 %d 个组合, 阈值=%.1f%%", len(notifyLines), len(failLines), cfg.WeightThreshold)
+	if len(notifyLines) > 0 {
+		subject := fmt.Sprintf("雪球持仓变化提醒：%d 条比例变化≥%.0f%%", len(notifyLines), cfg.WeightThreshold)
+		logger.Log.Printf("[notify] 发送飞书消息: 持仓变化提醒")
+		sendMessage(subject, strings.Join(notifyLines, "\n"))
 	}
 	if len(failLines) > 0 {
 		subject := fmt.Sprintf("雪球获取失败：%d 个组合", len(failLines))
-		logger.Log.Printf("[notify] 发送邮件: 获取失败提醒")
-		sendMail(subject, strings.Join(failLines, "\n"))
+		logger.Log.Printf("[notify] 发送飞书消息: 获取失败提醒")
+		sendMessage(subject, strings.Join(failLines, "\n"))
 	}
-	if len(emailLines) == 0 && len(failLines) == 0 {
+	if len(notifyLines) == 0 && len(failLines) == 0 {
 		if cfg.WeightThreshold == 0 {
-			logger.Log.Printf("[notify] 发送邮件: 无变化提醒 (阈值=0)")
-			sendMail("雪球持仓检查：无变化", "本次检查完成，持仓无变化。")
+			logger.Log.Printf("[notify] 发送飞书消息: 无变化提醒 (阈值=0)")
+			sendMessage("雪球持仓检查：无变化", "本次检查完成，持仓无变化。")
 		} else {
-			logger.Log.Printf("[notify] 无变化且阈值>0，不发邮件")
+			logger.Log.Printf("[notify] 无变化且阈值>0，不发消息")
 		}
 	}
 	logger.Log.Printf("[notify] 检查完成")

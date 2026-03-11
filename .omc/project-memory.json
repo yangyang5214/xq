@@ -1,0 +1,194 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773238762468,
+  "projectRoot": "/root/lxa/xq",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Go",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "go.mod"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "go",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "cmd": {
+      "path": "cmd",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1773238762465,
+      "keyFiles": []
+    },
+    "internal": {
+      "path": "internal",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1773238762466,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "internal/server/notify.go",
+      "accessCount": 15,
+      "lastAccessed": 1773239892986,
+      "type": "file"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 8,
+      "lastAccessed": 1773240556635,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 6,
+      "lastAccessed": 1773240622182,
+      "type": "file"
+    },
+    {
+      "path": "internal/xueqiu/cookiestxt.go",
+      "accessCount": 5,
+      "lastAccessed": 1773240445904,
+      "type": "file"
+    },
+    {
+      "path": "internal/server/config.go",
+      "accessCount": 3,
+      "lastAccessed": 1773239778939,
+      "type": "file"
+    },
+    {
+      "path": "go.mod",
+      "accessCount": 3,
+      "lastAccessed": 1773240405152,
+      "type": "file"
+    },
+    {
+      "path": ".cursor/rules/go-logging.mdc",
+      "accessCount": 2,
+      "lastAccessed": 1773238943600,
+      "type": "file"
+    },
+    {
+      "path": ".cursor/rules/update-readme.mdc",
+      "accessCount": 2,
+      "lastAccessed": 1773238943654,
+      "type": "file"
+    },
+    {
+      "path": "Taskfile.yml",
+      "accessCount": 2,
+      "lastAccessed": 1773238949413,
+      "type": "file"
+    },
+    {
+      "path": "internal/server/server.go",
+      "accessCount": 2,
+      "lastAccessed": 1773238956244,
+      "type": "file"
+    },
+    {
+      "path": "internal/xueqiu/client.go",
+      "accessCount": 2,
+      "lastAccessed": 1773238956293,
+      "type": "file"
+    },
+    {
+      "path": "internal/xueqiu/holdings.go",
+      "accessCount": 2,
+      "lastAccessed": 1773238963634,
+      "type": "file"
+    },
+    {
+      "path": "cmd/xq/main.go",
+      "accessCount": 2,
+      "lastAccessed": 1773238996162,
+      "type": "file"
+    },
+    {
+      "path": "cmd/xq/root.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238792615,
+      "type": "file"
+    },
+    {
+      "path": "internal/logger/logger.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238956239,
+      "type": "file"
+    },
+    {
+      "path": "internal/email/send.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238963642,
+      "type": "file"
+    },
+    {
+      "path": "internal/email/send_test.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238977347,
+      "type": "file"
+    },
+    {
+      "path": "internal/xueqiu/browser.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238977359,
+      "type": "file"
+    },
+    {
+      "path": "internal/xueqiu/fetch_api.go",
+      "accessCount": 1,
+      "lastAccessed": 1773238996149,
+      "type": "file"
+    },
+    {
+      "path": "internal/email/config.go",
+      "accessCount": 1,
+      "lastAccessed": 1773239383852,
+      "type": "file"
+    },
+    {
+      "path": "internal/feishu/feishu.go",
+      "accessCount": 1,
+      "lastAccessed": 1773239762860,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1773240121432,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

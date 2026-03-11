@@ -12,7 +12,7 @@ import (
 // NotifyConfig 页面可配置的提醒参数
 type NotifyConfig struct {
 	Enabled         bool    `json:"enabled"`
-	EmailTo         string  `json:"email_to"`
+	FeishuWebhook   string  `json:"feishu_webhook"` // 飞书群机器人 webhook URL
 	WeightThreshold float64 `json:"weight_threshold"`
 	IntervalMinutes int     `json:"interval_minutes"` // 检查间隔（分钟）
 }
@@ -21,7 +21,7 @@ type NotifyConfig struct {
 func defaultNotifyConfig() NotifyConfig {
 	return NotifyConfig{
 		Enabled:         false,
-		EmailTo:         "",
+		FeishuWebhook:   "",
 		WeightThreshold: 5,
 		IntervalMinutes: 30,
 	}

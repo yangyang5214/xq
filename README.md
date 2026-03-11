@@ -1,6 +1,6 @@
 # 雪球组合持仓分布对比与提醒
 
-从 cookies.txt 与组合列表拉取雪球组合当前持仓分布，与上次快照对比；比例变化超过阈值时发邮件提醒。
+从 cookies.txt 与组合列表拉取雪球组合当前持仓分布，与上次快照对比；比例变化超过阈值时通过飞书群机器人发送提醒。
 
 ## 快速开始
 
@@ -47,11 +47,12 @@ go build -o xq ./cmd/xq
 |--------|------|
 | 启用定时提醒 | 勾选后按间隔定时检查 |
 | 检查间隔（分钟） | 每隔多少分钟检查一次 |
-| 持仓比例变化阈值 | 超过此阈值才发邮件；设为 0 时无变化也发 |
-| 收件人邮箱 | 多个用逗号分隔，留空则用 $HOME/.email 的 to |
+| 持仓比例变化阈值 | 超过此阈值才发送提醒；设为 0 时无变化也发 |
+| 飞书 Webhook URL | 飞书群机器人的 webhook 地址 |
 
 **规则**
 - 仅在**交易日 9:00-15:00**（北京时间）执行检查
+- 持仓比例变化超过阈值时会触发提醒（包括新增、调整、调出）
 - 快照保存在 `$HOME/.xq_snapshots/`
 
 ## 配置文件
@@ -60,21 +61,23 @@ go build -o xq ./cmd/xq
 
 可通过环境变量 `XQ_CONFIG` 指定路径，否则默认 `$HOME/.xq_config.json`。
 
-### 邮箱配置 `$HOME/.email`
-
+格式示例：
 ```json
 {
-  "password": "xxxx",
-  "smtp_host": "smtp.126.com",
-  "smtp_port": 25,
-  "from": "xxxx",
-  "to": ["xxxx"],
-  "allow_plain": true
+  "notify": {
+    "enabled": true,
+    "feishu_webhook": "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
+    "weight_threshold": 5,
+    "interval_minutes": 30
+  }
 }
 ```
 
-- 端口 25 若报 "unencrypted connection"，可加 `"allow_plain": true`（密码明文传输，仅可信网络使用）
-- 端口 465 使用隐式 TLS，587 使用 STARTTLS
+### 飞书群机器人配置
+
+1. 在飞书群中添加「自定义机器人」
+2. 获取 webhook URL
+3. 将 URL 填入配置的 `feishu_webhook` 字段
 
 ## 日志
 

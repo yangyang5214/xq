@@ -27,7 +27,7 @@ func isTradingTime() bool {
 	return hour >= 9 && hour < 15
 }
 
-// isTradingTimeForSummary 判断当前是否为交易日 14:50-14:59（北京时间）
+// isTradingTimeForSummary 判断当前是否为交易日 14:50（北京时间）
 func isTradingTimeForSummary() bool {
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
@@ -39,7 +39,7 @@ func isTradingTimeForSummary() bool {
 	}
 	hour := now.Hour()
 	minute := now.Minute()
-	return hour == 14 && minute >= 50 && minute < 60
+	return hour == 14 && minute == 50
 }
 
 // runNotify 执行一次持仓对比与飞书消息提醒
@@ -212,6 +212,18 @@ func (s *Server) startNotifyLoop() {
 	logger.Log.Printf("[notify] 定时提醒已启动，间隔 %v", interval)
 }
 
+// isYesterday 判断给定时间戳是否是昨天（北京时间）
+func isYesterday(ts int64) bool {
+	if ts == 0 {
+		return false
+	}
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	t := time.Unix(ts, 0).In(loc)
+	now := time.Now().In(loc)
+	yesterday := now.AddDate(0, 0, -1)
+	return t.Year() == yesterday.Year() && t.Month() == yesterday.Month() && t.Day() == yesterday.Day()
+}
+
 // runDailySummary 发送每日持仓汇总到飞书
 func (s *Server) runDailySummary() {
 	cfg := s.configStore.getNotify()
@@ -237,6 +249,14 @@ func (s *Server) runDailySummary() {
 		if names == nil {
 			names = make(map[string]string)
 		}
+	}
+
+	dir := ""
+	if home, err := os.UserHomeDir(); err == nil {
+		dir = filepath.Join(home, ".xq_snapshots")
+	}
+	if dir == "" {
+		return
 	}
 
 	var summaryLines []string
@@ -266,12 +286,58 @@ func (s *Server) runDailySummary() {
 			displayName = cubeSym
 		}
 
+		// 读取上次快照，是否是昨天的数据
+		snapshotPath := xueqiu.SnapshotPath(dir, cubeSym)
+		last, snapErr := xueqiu.LoadSnapshot(snapshotPath)
+
+		// 构建昨天的持仓 map（只有当快照是昨天的才使用）
+		var lastMap map[string]xueqiu.Holding
+		hasYesterdayData := false
+		if snapErr == nil && last != nil && isYesterday(last.UpdatedAt) {
+			hasYesterdayData = true
+			lastMap = make(map[string]xueqiu.Holding)
+			for _, h := range last.Holdings {
+				lastMap[h.Symbol] = h
+			}
+		}
+
 		// 构建组合持仓明细
 		cubeHeader := fmt.Sprintf("【%s (%s)】", displayName, cubeSym)
 		summaryLines = append(summaryLines, cubeHeader)
 		for _, h := range cur.Holdings {
 			line := fmt.Sprintf("  %s %s: %.2f%%", h.Symbol, h.Name, h.Weight)
+			if hasYesterdayData {
+				if prev, ok := lastMap[h.Symbol]; ok {
+					diff := h.Weight - prev.Weight
+					if diff > 0 {
+						line += fmt.Sprintf(" (昨日 %.2f%%, ↑+%.2f%%)", prev.Weight, diff)
+					} else if diff < 0 {
+						line += fmt.Sprintf(" (昨日 %.2f%%, ↓%.2f%%)", prev.Weight, -diff)
+					} else {
+						line += fmt.Sprintf(" (昨日 %.2f%%, 无变化)", prev.Weight)
+					}
+				} else {
+					line += " (昨日未有，今日新增)"
+				}
+			}
 			summaryLines = append(summaryLines, line)
+		}
+		// 检查是否昨日有但今日已调出的
+		if hasYesterdayData {
+			curMap := make(map[string]bool)
+			for _, h := range cur.Holdings {
+				curMap[h.Symbol] = true
+			}
+			removedAdded := false
+			for sym, h := range lastMap {
+				if !curMap[sym] {
+					if !removedAdded {
+						summaryLines = append(summaryLines, "  已调出:")
+						removedAdded = true
+					}
+					summaryLines = append(summaryLines, fmt.Sprintf("    %s %s: 昨日 %.2f%%", sym, h.Name, h.Weight))
+				}
+			}
 		}
 		summaryLines = append(summaryLines, "") // 空行分隔
 	}
@@ -314,5 +380,5 @@ func (s *Server) startDailySummaryLoop() {
 			time.Sleep(time.Minute)
 		}
 	}()
-	logger.Log.Printf("[daily-summary] 每日持仓汇总已启动（交易日 15:50）")
+	logger.Log.Printf("[daily-summary] 每日持仓汇总已启动（交易日 14:50）")
 }

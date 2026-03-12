@@ -59,14 +59,14 @@
   "hotPaths": [
     {
       "path": "internal/server/notify.go",
-      "accessCount": 26,
-      "lastAccessed": 1773297066498,
+      "accessCount": 33,
+      "lastAccessed": 1773301825413,
       "type": "file"
     },
     {
       "path": "README.md",
-      "accessCount": 23,
-      "lastAccessed": 1773297119698,
+      "accessCount": 25,
+      "lastAccessed": 1773302113605,
       "type": "file"
     },
     {
@@ -94,15 +94,15 @@
       "type": "file"
     },
     {
-      "path": "cmd/xq/feishu_test.go",
-      "accessCount": 8,
-      "lastAccessed": 1773295138518,
+      "path": "internal/server/server.go",
+      "accessCount": 9,
+      "lastAccessed": 1773300450173,
       "type": "file"
     },
     {
-      "path": "internal/server/server.go",
+      "path": "cmd/xq/feishu_test.go",
       "accessCount": 8,
-      "lastAccessed": 1773297078558,
+      "lastAccessed": 1773295138518,
       "type": "file"
     },
     {
@@ -130,6 +130,12 @@
       "type": "file"
     },
     {
+      "path": "internal/xueqiu/holdings.go",
+      "accessCount": 4,
+      "lastAccessed": 1773301490835,
+      "type": "file"
+    },
+    {
       "path": "go.mod",
       "accessCount": 3,
       "lastAccessed": 1773240405152,
@@ -139,12 +145,6 @@
       "path": "cmd/xq/server.go",
       "accessCount": 3,
       "lastAccessed": 1773293909228,
-      "type": "file"
-    },
-    {
-      "path": "internal/xueqiu/holdings.go",
-      "accessCount": 3,
-      "lastAccessed": 1773296915895,
       "type": "file"
     },
     {
@@ -224,6 +224,18 @@
       "accessCount": 1,
       "lastAccessed": 1773295542355,
       "type": "file"
+    },
+    {
+      "path": "internal/server",
+      "accessCount": 1,
+      "lastAccessed": 1773300476148,
+      "type": "directory"
+    },
+    {
+      "path": "internal/xueqiu",
+      "accessCount": 1,
+      "lastAccessed": 1773301165133,
+      "type": "directory"
     }
   ],
   "userDirectives": []

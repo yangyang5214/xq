@@ -1,0 +1,22 @@
+2026/03/12 11:47:01 unknown command "feishu-test" for "xq"
+2026/03/12 14:04:51 [feishu-test] 加载配置 from=.env receive_type=open_id
+2026/03/12 14:04:51 [feishu-test] 正在发送消息...
+2026/03/12 14:04:51 [feishu] 发送消息: 这是一条来自 xq 工具的测试消息，飞书通知配置正常！
+2026/03/12 14:04:51 发送消息失败: 飞书 API 错误: Invalid parameter type in json: content. Invalid parameter value: {"text":"这是一条来自 xq 工具的测试消息，飞书通知配置正常！"}. Please check and modify accordingly.
+2026/03/12 14:10:52 [feishu-test] 加载配置 from=.env receive_type=open_id
+2026/03/12 14:10:52 [feishu-test] 正在发送消息...
+2026/03/12 14:10:53 [feishu] 发送消息: 测试一条消息
+2026/03/12 14:10:53 发送消息失败: 飞书 API 错误: Invalid parameter type in json: content. Invalid parameter value: {"text":"测试一条消息"}. Please check and modify accordingly.
+2026/03/12 14:13:04 [feishu-test] 加载配置 from=.env receive_type=open_id
+2026/03/12 14:13:04 [feishu-test] 正在发送消息...
+2026/03/12 14:13:04 [feishu] 发送消息: 测试修复后的消息
+2026/03/12 14:13:04 发送消息失败: 飞书 API 错误: Bot ability is not activated.
+2026/03/12 14:19:41 [feishu-test] 加载配置 from=.env receive_type=open_id
+2026/03/12 14:19:41 [feishu-test] 正在发送消息...
+2026/03/12 14:19:41 [feishu] 发送消息: 这是一条来自 xq 工具的测试消息，飞书通知配置正常！
+2026/03/12 14:19:41 发送消息失败: 飞书 API 错误: Bot ability is not activated.
+2026/03/12 14:20:58 [feishu-test] 加载配置 from=.env receive_type=open_id
+2026/03/12 14:20:58 [feishu-test] 正在发送消息...
+2026/03/12 14:20:59 [feishu] 发送消息: 这是一条来自 xq 工具的测试消息，飞书通知配置正常！
+2026/03/12 14:20:59 [feishu] 消息已发送，msg_id=
+2026/03/12 14:20:59 [feishu-test] 消息发送成功

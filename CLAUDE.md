@@ -34,7 +34,7 @@ go test ./internal/email
 **HTTP Server** (`internal/server/`)
 - Embedded static web UI via `//go:embed static`
 - APIs: `/api/cubes`, `/api/cubes/{symbol}`, `/api/config` (GET/PUT), `/api/notify/run`
-- Configuration persistence via `configStore` (`$HOME/.xq_config.json`, override with `XQ_CONFIG` env)
+- Configuration loaded from `.env` file (default current directory, override with `XQ_ENV` env)
 - Scheduled notify loop runs only during trading hours (9:00-15:00 Beijing time)
 
 **Xueqiu Client** (`internal/xueqiu/`)
@@ -44,8 +44,8 @@ go test ./internal/email
 - Snapshots stored in `$HOME/.xq_snapshots/{symbol}.json`
 
 **Feishu Notification** (`internal/feishu/`)
-- Sends text messages via Feishu webhook API
-- Configured via `NotifyConfig.FeishuWebhook`
+- Sends text messages via Feishu app API
+- Configured via `NotifyConfig` (XQ_FEISHU_* env vars)
 
 **Logger Module** (`internal/logger/`)
 - Global `logger.Log` object for all output
@@ -63,6 +63,7 @@ go test ./internal/email
 1. **Always update README.md** after adding/modifying commands, parameters, config, or APIs
 2. **Never use `fmt.Printf/Println`** for output - must use `internal/logger.Log` (global logger) consistently
 3. Use `log.Fatalf(...)` to exit, otherwise `log.Printf/Println` or logger.Log methods
+4. **Run `task build` after code changes** - ensure the project compiles successfully before marking a task complete
 
 ## Configuration Files
 
@@ -70,8 +71,18 @@ go test ./internal/email
 |------|---------|
 | `cookies.txt` | Xueqiu authentication cookies (from Get cookies.txt LOCALLY plugin) |
 | `cubes.txt` | Line-separated cube symbols, optional `symbol name` format |
-| `$HOME/.xq_config.json` | Notify settings (enabled, interval, threshold, feishu_webhook). Override with `XQ_CONFIG` env |
+| `.env` | Notify settings (XQ_NOTIFY_ENABLED, XQ_INTERVAL_MINUTES, XQ_WEIGHT_THRESHOLD, XQ_FEISHU_*). Use `XQ_ENV` env var to override path |
 | `$HOME/.xq_snapshots/` | Directory for cube 持仓 snapshots |
+
+**Environment Variables**
+- `XQ_NOTIFY_ENABLED`: Enable/disable notifications (true/false)
+- `XQ_INTERVAL_MINUTES`: Check interval in minutes
+- `XQ_WEIGHT_THRESHOLD`: Weight change threshold percentage
+- `XQ_FEISHU_APP_ID`: Feishu app ID
+- `XQ_FEISHU_APP_SECRET`: Feishu app secret
+- `XQ_FEISHU_RECEIVE_ID`: Feishu receiver ID (user or chat)
+- `XQ_FEISHU_RECEIVE_TYPE`: Receiver type (open_id/user_id/union_id/chat_id)
+- `XQ_ENV`: Path to .env file (default: `.env`)
 
 ## Trading Hours Check
 

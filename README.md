@@ -65,44 +65,67 @@ task deploy HOST=myserver BINARY=bin/xq REMOTE=/opt/xq
 **页面**
 - 根路径 `/` - 聚合持仓，支持按组合筛选
 
+### feishu-test
+
+测试飞书消息发送，用于验证配置是否正确。
+
+```bash
+./xq feishu-test [message]
+```
+
+| 参数 | 说明 | 默认 |
+|------|------|------|
+| `[message]` | 要发送的消息内容（位置参数） | 使用默认测试消息 |
+| `-m, --message` | 要发送的消息内容（flag） | 默认测试消息 |
+
+**示例**
+```bash
+# 使用默认消息测试
+./xq feishu-test
+
+# 指定消息内容（位置参数）
+./xq feishu-test "这是一条测试消息"
+
+# 指定消息内容（flag）
+./xq feishu-test --message "自定义消息"
+```
+
 ## 提醒配置
 
-提醒规则通过配置文件设置：`$HOME/.xq_config.json`
+提醒规则通过 `.env` 文件设置（默认使用当前目录的 `.env`，可通过环境变量 `XQ_ENV` 指定路径）。
 
 | 配置项 | 说明 |
 |--------|------|
-| enabled | 启用定时提醒（true/false） |
-| interval_minutes | 检查间隔（分钟），如 30 表示每 30 分钟检查一次 |
-| weight_threshold | 持仓比例变化阈值（%），如 5 表示变化超过 5% 才发送提醒；设为 0 时无变化也发 |
-| feishu_app_id | 飞书应用的 App ID |
-| feishu_app_secret | 飞书应用的 App Secret |
-| feishu_receive_id | 接收消息的 ID（用户 open_id/user_id/union_id 或群 chat_id），主动推送时使用 |
-| feishu_receive_type | 接收者类型：open_id、user_id、union_id、chat_id，默认 open_id |
+| XQ_NOTIFY_ENABLED | 启用定时提醒（true/false） |
+| XQ_INTERVAL_MINUTES | 检查间隔（分钟），如 30 表示每 30 分钟检查一次 |
+| XQ_WEIGHT_THRESHOLD | 持仓比例变化阈值（%），如 5 表示变化超过 5% 才发送提醒；设为 0 时无变化也发 |
+| XQ_FEISHU_APP_ID | 飞书应用的 App ID |
+| XQ_FEISHU_APP_SECRET | 飞书应用的 App Secret |
+| XQ_FEISHU_RECEIVE_ID | 接收消息的 ID（用户 open_id/user_id/union_id 或群 chat_id），主动推送时使用 |
+| XQ_FEISHU_RECEIVE_TYPE | 接收者类型：open_id、user_id、union_id、chat_id，默认 open_id |
 
 **规则**
-- 仅在**交易日 9:00-15:00**（北京时间）执行检查
+- 仅在**交易日 9:00-15:00**（北京时间）执行持仓变化检查
 - 持仓比例变化超过阈值时会触发提醒（包括新增、调整、调出）
+- 每个交易日**14:50**会自动发送一份持仓汇总日报（包含所有组合当前持仓明细）
 - 快照保存在 `$HOME/.xq_snapshots/`
+- API 提供的保存配置接口在 .env 模式下不实际保存（需手动编辑 .env 文件）
 
 ## 配置文件
 
-### 提醒配置 `$HOME/.xq_config.json`
+### 提醒配置 `.env`
 
-可通过环境变量 `XQ_CONFIG` 指定路径，否则默认 `$HOME/.xq_config.json`。
+可通过环境变量 `XQ_ENV` 指定路径，否则默认当前目录的 `.env`。
 
 格式示例：
-```json
-{
-  "notify": {
-    "enabled": true,
-    "interval_minutes": 30,
-    "weight_threshold": 5,
-    "feishu_app_id": "cli_xxxxxxxxxxxxx",
-    "feishu_app_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "feishu_receive_id": "ou_xxxxxxxxxxxxx",
-    "feishu_receive_type": "open_id"
-  }
-}
+```env
+XQ_NOTIFY_ENABLED=true
+XQ_INTERVAL_MINUTES=30
+XQ_WEIGHT_THRESHOLD=5
+XQ_FEISHU_APP_ID=cli_xxxxxxxxxxxxx
+XQ_FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+XQ_FEISHU_RECEIVE_ID=ou_xxxxxxxxxxxxx
+XQ_FEISHU_RECEIVE_TYPE=open_id
 ```
 
 ### 飞书应用配置

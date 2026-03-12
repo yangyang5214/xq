@@ -135,7 +135,7 @@ func (s *Server) ConfigPut(w http.ResponseWriter, r *http.Request) {
 		nc.IntervalMinutes = 30
 	}
 	if err := s.configStore.save(nc); err != nil {
-		logger.Log.Printf("[server] 保存配置失败 path=%s err=%v", configPath(), err)
+		logger.Log.Printf("[server] 保存配置失败 err=%v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "保存配置失败"})
 		return
 	}
@@ -179,5 +179,6 @@ func (s *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Run() error {
 	logger.Log.Printf("server listening on %s", s.cfg.Addr)
 	s.startNotifyLoop()
+	s.startDailySummaryLoop()
 	return http.ListenAndServe(s.cfg.Addr, s.Mux())
 }

@@ -181,14 +181,15 @@ func (w *wsClient) Send(receiveID, receiveType, text string) error {
 		return fmt.Errorf("获取 access token: %w", err)
 	}
 
-	content := map[string]interface{}{
-		"text": text,
+	contentStr, err := json.Marshal(map[string]string{"text": text})
+	if err != nil {
+		return fmt.Errorf("marshal content: %w", err)
 	}
 	msgBody := map[string]interface{}{
 		"receive_id":     receiveID,
 		"receive_id_type": receiveType,
 		"msg_type":       "text",
-		"content":       content,
+		"content":       string(contentStr),
 	}
 
 	jsonBody, err := json.Marshal(msgBody)

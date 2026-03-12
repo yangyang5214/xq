@@ -17,6 +17,7 @@ tasks:
       BINARY: '{{.BINARY | default "bin/xq"}}'
       REMOTE: '{{.REMOTE | default "/opt/xq"}}'
     cmds:
+      - task build
       - echo "停止远程服务..."
       - ssh {{.HOST}} systemctl stop xq
       - echo "上传二进制文件..."

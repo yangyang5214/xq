@@ -58,39 +58,57 @@
   },
   "hotPaths": [
     {
+      "path": "internal/server/notify.go",
+      "accessCount": 26,
+      "lastAccessed": 1773297066498,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 23,
+      "lastAccessed": 1773297119698,
+      "type": "file"
+    },
+    {
       "path": "internal/server/static/index.html",
       "accessCount": 22,
       "lastAccessed": 1773242620154,
       "type": "file"
     },
     {
-      "path": "internal/server/notify.go",
-      "accessCount": 20,
-      "lastAccessed": 1773243795968,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 16,
-      "lastAccessed": 1773243894916,
+      "path": "internal/server/config.go",
+      "accessCount": 18,
+      "lastAccessed": 1773296868729,
       "type": "file"
     },
     {
       "path": "CLAUDE.md",
-      "accessCount": 8,
-      "lastAccessed": 1773240556635,
+      "accessCount": 14,
+      "lastAccessed": 1773294541375,
       "type": "file"
     },
     {
       "path": "internal/feishu/feishu.go",
-      "accessCount": 6,
-      "lastAccessed": 1773243770879,
+      "accessCount": 12,
+      "lastAccessed": 1773296842789,
       "type": "file"
     },
     {
-      "path": "internal/server/config.go",
+      "path": "cmd/xq/feishu_test.go",
+      "accessCount": 8,
+      "lastAccessed": 1773295138518,
+      "type": "file"
+    },
+    {
+      "path": "internal/server/server.go",
+      "accessCount": 8,
+      "lastAccessed": 1773297078558,
+      "type": "file"
+    },
+    {
+      "path": "cmd/xq/main.go",
       "accessCount": 6,
-      "lastAccessed": 1773243824377,
+      "lastAccessed": 1773295138534,
       "type": "file"
     },
     {
@@ -106,21 +124,27 @@
       "type": "file"
     },
     {
+      "path": "cmd/xq/root.go",
+      "accessCount": 5,
+      "lastAccessed": 1773295169208,
+      "type": "file"
+    },
+    {
       "path": "go.mod",
       "accessCount": 3,
       "lastAccessed": 1773240405152,
       "type": "file"
     },
     {
-      "path": "cmd/xq/main.go",
+      "path": "cmd/xq/server.go",
       "accessCount": 3,
-      "lastAccessed": 1773241047330,
+      "lastAccessed": 1773293909228,
       "type": "file"
     },
     {
-      "path": "internal/server/server.go",
+      "path": "internal/xueqiu/holdings.go",
       "accessCount": 3,
-      "lastAccessed": 1773241453380,
+      "lastAccessed": 1773296915895,
       "type": "file"
     },
     {
@@ -139,18 +163,6 @@
       "path": "internal/xueqiu/client.go",
       "accessCount": 2,
       "lastAccessed": 1773238956293,
-      "type": "file"
-    },
-    {
-      "path": "internal/xueqiu/holdings.go",
-      "accessCount": 2,
-      "lastAccessed": 1773238963634,
-      "type": "file"
-    },
-    {
-      "path": "cmd/xq/root.go",
-      "accessCount": 2,
-      "lastAccessed": 1773241042562,
       "type": "file"
     },
     {
@@ -196,15 +208,21 @@
       "type": "directory"
     },
     {
-      "path": "cmd/xq/server.go",
-      "accessCount": 1,
-      "lastAccessed": 1773241042515,
-      "type": "file"
-    },
-    {
       "path": "cmd/xq/deploy.go",
       "accessCount": 1,
       "lastAccessed": 1773241081227,
+      "type": "file"
+    },
+    {
+      "path": ".env",
+      "accessCount": 1,
+      "lastAccessed": 1773286378240,
+      "type": "file"
+    },
+    {
+      "path": "cmd/xq/feishu_cmd.go",
+      "accessCount": 1,
+      "lastAccessed": 1773295542355,
       "type": "file"
     }
   ],
